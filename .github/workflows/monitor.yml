@@ -1,0 +1,37 @@
+name: Monitor Stock Xbox
+
+on:
+  schedule:
+    # Revisión normal: cada 5 minutos. Solo avisa si hay stock.
+    - cron: "*/5 * * * *"
+    # Ping diario: a las 13:00 UTC (= 8:00 am Colombia, UTC-5).
+    # Cambia la hora si quieres que el ping llegue en otro momento.
+    - cron: "0 13 * * *"
+  workflow_dispatch: # permite lanzarlo manualmente desde la pestaña "Actions" para probar
+
+jobs:
+  check-stock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install requests beautifulsoup4
+
+      - name: Revisar stock
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PRODUCT_URL: "https://cadenamulti.co/products/xbox-series-x-1tb-ssd-1-control"
+          # Si el cron que disparó esta corrida fue el de las 13:00 UTC,
+          # marcamos DAILY_PING=true para que el script mande mensaje
+          # aunque no haya stock. En corridas manuales (workflow_dispatch)
+          # queda en "false" por defecto.
+          DAILY_PING: ${{ github.event.schedule == '0 13 * * *' }}
+        run: python monitor_stock.py
